@@ -9,6 +9,11 @@ void DeviceContext::initialize()
 
 }
 
+void DeviceContext::clear()
+{
+	vkDestroyDevice(mVkDevice, nullptr);
+}
+
 void DeviceContext::selectPhysicalDevice(const VkInstance instance)
 {
 	uint32_t devicesCount = 0;
@@ -60,9 +65,134 @@ void DeviceContext::selectPhysicalDevice(const VkInstance instance)
 		std::cin >> chosenDevice;
 	}
 	mVkPhysicalDevice = physicalDevices[chosenDevice];
-
 }
 
+
+void DeviceContext::createLogicalDevice(std::vector<const char*> &desiredExtensions, VkPhysicalDeviceFeatures &desiredPhysicalDeviceFeatures)
+{
+	if (!checkDesiredDeviceExtensions(desiredExtensions))
+	{
+		throw std::runtime_error("could not find all desired device extensions");
+	}
+
+	if (!checkDesiredDeviceFeatures())
+	{
+		throw std::runtime_error("Desired device features not present in physical device");
+	}
+	VkPhysicalDeviceFeatures desiredFeatures{};
+	desiredFeatures.geometryShader = 1;
+	
+	uint32_t queueFamilyPropertyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(mVkPhysicalDevice, &queueFamilyPropertyCount, nullptr);
+	std::vector<VkQueueFamilyProperties> queueFamilyProperties;
+	queueFamilyProperties.resize(queueFamilyPropertyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(mVkPhysicalDevice, &queueFamilyPropertyCount, queueFamilyProperties.data());
+
+	for (int i = 0; i < queueFamilyPropertyCount; i++)
+	{
+		int queueIndex = i;
+		if ((queueFamilyProperties[queueIndex].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
+		{
+			mGraphicsQueueInfo.familyIndex = queueIndex;
+			break;
+		}
+	}
+	mGraphicsQueueInfo.priorities.push_back(1.0f);
+	for (int i = 0; i < queueFamilyPropertyCount; i++)
+	{
+		int queueIndex = i;
+		if((queueFamilyProperties[queueIndex].queueFlags & VK_QUEUE_COMPUTE_BIT) != 0)
+		{
+			mComputeQueueInfo.familyIndex = queueIndex;
+			break;
+		}
+	}
+	std::vector<QueueInfo> requestQueues;
+	requestQueues.push_back(QueueInfo{ mGraphicsQueueInfo.familyIndex, {1.0f} });
+	if (mGraphicsQueueInfo.familyIndex != mComputeQueueInfo.familyIndex)
+	{
+		requestQueues.push_back(QueueInfo{ mComputeQueueInfo.familyIndex, {1.0f} });
+	}
+
+	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+	for (int i = 0; i < requestQueues.size(); i++)
+	{
+		VkDeviceQueueCreateInfo deviceQueueCreateInfo{};
+		deviceQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		deviceQueueCreateInfo.pQueuePriorities = requestQueues[i].priorities.data();
+		deviceQueueCreateInfo.queueCount = requestQueues[i].priorities.size();
+		deviceQueueCreateInfo.queueFamilyIndex = requestQueues[i].familyIndex;
+		deviceQueueCreateInfo.flags = 0;
+		deviceQueueCreateInfo.pNext = nullptr;
+		queueCreateInfos.push_back(deviceQueueCreateInfo);
+	}
+
+	VkDeviceCreateInfo deviceCreateInfo{};
+	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	deviceCreateInfo.pNext = nullptr;
+	deviceCreateInfo.flags = 0;
+	deviceCreateInfo.queueCreateInfoCount = queueCreateInfos.size();
+	deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
+	deviceCreateInfo.enabledLayerCount = 0;
+	deviceCreateInfo.ppEnabledLayerNames = nullptr;
+	deviceCreateInfo.enabledExtensionCount = desiredExtensions.size();
+	deviceCreateInfo.ppEnabledExtensionNames = desiredExtensions.data();
+	deviceCreateInfo.pEnabledFeatures = &desiredFeatures;
+	
+
+	if (vkCreateDevice(mVkPhysicalDevice, &deviceCreateInfo, nullptr, &mVkDevice) != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to create device");
+	}
+
+	vkGetDeviceQueue(mVkDevice, mComputeQueueInfo.familyIndex, 0, &mComputeQueue);
+	vkGetDeviceQueue(mVkDevice, mGraphicsQueueInfo.familyIndex, 0, &mGraphicsQueue);
+	if (mGraphicsQueue == nullptr || mComputeQueue == nullptr)
+	{
+		throw std::runtime_error("failed to get device queue");
+	}
+}
+bool DeviceContext::checkDesiredDeviceFeatures()
+{
+	VkPhysicalDeviceFeatures physicalDeviceFeatures{};
+	vkGetPhysicalDeviceFeatures(mVkPhysicalDevice, &physicalDeviceFeatures);
+	if (physicalDeviceFeatures.geometryShader == 1)
+	{
+		return true;
+	}
+	return false;
+}
+bool DeviceContext::checkDesiredDeviceExtensions(std::vector<const char*>& desiredExtensions)
+{
+	uint32_t extensionCount = 0;
+	vkEnumerateDeviceExtensionProperties(mVkPhysicalDevice, nullptr, &extensionCount, nullptr);
+	std::vector<VkExtensionProperties> availableExtenions;
+	availableExtenions.resize(extensionCount);
+
+	vkEnumerateDeviceExtensionProperties(mVkPhysicalDevice, nullptr, &extensionCount, availableExtenions.data());
+
+	uint32_t desiredFoundCount = 0;
+	bool foundAll = false;
+	for (size_t i = 0; i < availableExtenions.size(); i++)
+	{
+		const char* availableExtensionName = availableExtenions[i].extensionName;
+		for (size_t j = 0; j < desiredExtensions.size(); j++)
+		{
+			if (strcmp(availableExtensionName, desiredExtensions[j]) == 0)
+			{
+				desiredFoundCount++;
+				break;
+			}
+		}
+		if (desiredFoundCount == desiredExtensions.size())
+		{
+			foundAll = true;
+			break;
+		}
+	}
+
+	return foundAll;
+}
 const VkDevice DeviceContext::getDevice() const
 {
 	return mVkDevice;

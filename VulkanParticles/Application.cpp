@@ -4,6 +4,15 @@ Application::Application(std::string name, int width, int height):mName(name)
 {
 	mWindow = Window(width, height, mName.c_str());
 	mVkInstance = nullptr;
+	mDesiredDeviceExtensions = { "VK_KHR_swapchain" };
+
+#ifdef _DEBUG
+	mDesiredInstanceLayers = { "VK_LAYER_KHRONOS_validation" };
+	mDesiredInstanceExtensions = { "VK_EXT_debug_report" };
+#endif
+	mDesiredDeviceFeatures = VkPhysicalDeviceFeatures{};
+	mDesiredDeviceFeatures.geometryShader = 1;
+
 }
 
 int Application::initialize()
@@ -17,14 +26,15 @@ int Application::initialize()
 	
 	uint32_t count = 0;
 	const char** extensions = glfwGetRequiredInstanceExtensions(&count);
+	
 	for (int i = 0; i < count; i++)
 	{
-		mDesiredExtensions.push_back(extensions[i]);
+		mDesiredInstanceExtensions.push_back(extensions[i]);
 	}
 	uint32_t foundExtension = 0;
-	for (int i = 0; i < mDesiredExtensions.size(); i++)
+	for (int i = 0; i < mDesiredInstanceExtensions.size(); i++)
 	{
-		const char* desiredExtension = mDesiredExtensions[i];
+		const char* desiredExtension = mDesiredInstanceExtensions[i];
 		for (int j = 0; j < extensionsCount; j++)
 		{
 			if (strcmp(desiredExtension, mAvailableExtensions[j].extensionName) == 0)
@@ -35,11 +45,13 @@ int Application::initialize()
 		}
 	}
 
-	if (foundExtension < mDesiredExtensions.size())
+	if (foundExtension < mDesiredInstanceExtensions.size())
 	{
 		std::cout << "Missing extensions\n";
 		return 1;
 	}
+
+	
 
 	VkApplicationInfo applicationInfo{};
 	applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -53,17 +65,20 @@ int Application::initialize()
 	VkInstanceCreateInfo instanceCreateInfo{};
 	instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	instanceCreateInfo.pApplicationInfo = &applicationInfo;
-	instanceCreateInfo.enabledLayerCount = 0;
-	instanceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(mDesiredExtensions.size());
-	instanceCreateInfo.ppEnabledExtensionNames = mDesiredExtensions.data();
+	instanceCreateInfo.enabledLayerCount = static_cast<uint32_t>(mDesiredInstanceLayers.size());
+	instanceCreateInfo.ppEnabledLayerNames = mDesiredInstanceLayers.data();
+	instanceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(mDesiredInstanceExtensions.size());
+	instanceCreateInfo.ppEnabledExtensionNames = mDesiredInstanceExtensions.data();
 
-	if (vkCreateInstance(&instanceCreateInfo, nullptr, &mVkInstance) != VK_SUCCESS)
+	VkResult result = vkCreateInstance(&instanceCreateInfo, nullptr, &mVkInstance);
+	if (result != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to create instance");
 	}
 
 	mDeviceContext.initialize();
 	mDeviceContext.selectPhysicalDevice(mVkInstance);
+	mDeviceContext.createLogicalDevice(mDesiredDeviceExtensions, mDesiredDeviceFeatures);
 
 	return 0;
 }
@@ -84,6 +99,8 @@ int Application::run()
 
 int Application::clear()
 {
+	mDeviceContext.clear();
+	vkDestroyInstance(mVkInstance, nullptr);
 	return 0;
 }
 

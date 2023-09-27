@@ -19,7 +19,10 @@ private:
 	DeviceContext mDeviceContext;
 	Window mWindow;
 	std::vector<VkExtensionProperties> mAvailableExtensions;
-	std::vector<const char*> mDesiredExtensions;
+	std::vector<const char*> mDesiredInstanceExtensions;
+	std::vector<const char*> mDesiredInstanceLayers;
+	std::vector<const char*> mDesiredDeviceExtensions;
+	VkPhysicalDeviceFeatures mDesiredDeviceFeatures;
 	void update();
 	void render();
 };
