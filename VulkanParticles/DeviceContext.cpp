@@ -223,3 +223,13 @@ const VkPhysicalDevice DeviceContext::getPhysicalDevice() const
 {
 	return mVkPhysicalDevice;
 }
+
+const VkQueue DeviceContext::getGraphicsQueue() const
+{
+	return mGraphicsQueue;
+}
+
+const VkQueue DeviceContext::getComputeQueue() const
+{
+	return mComputeQueue;
+}

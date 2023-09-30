@@ -16,6 +16,8 @@ public:
 	void findQueueFamilies();
 	const VkDevice getDevice()const;
 	const VkPhysicalDevice getPhysicalDevice()const;
+	const VkQueue getGraphicsQueue()const;
+	const VkQueue getComputeQueue()const;
 private:
 	bool checkDesiredDeviceFeatures();
 	bool checkDesiredDeviceExtensions(std::vector<const char*>& desiredExtensions);
