@@ -13,6 +13,7 @@ public:
 	void clear();
 	void selectPhysicalDevice(const VkInstance instance);
 	void createLogicalDevice(std::vector<const char*>& desiredExtensions, VkPhysicalDeviceFeatures& desiredPhysicalDeviceFeatures);
+	void findQueueFamilies();
 	const VkDevice getDevice()const;
 	const VkPhysicalDevice getPhysicalDevice()const;
 private:

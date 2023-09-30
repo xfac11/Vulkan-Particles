@@ -24,6 +24,11 @@ void Window::initialize()
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 }
 
+void Window::clear(VkInstance instance)
+{
+	vkDestroySurfaceKHR(instance, mVkSurface, nullptr);
+}
+
 void Window::createWindow()
 {
 	mGlfwWindow = glfwCreateWindow(mWidth, mHeight, mTitle, NULL, NULL);
@@ -32,6 +37,11 @@ void Window::createWindow()
 		throw std::runtime_error("failed to create window!");
 	}
 	glfwMakeContextCurrent(mGlfwWindow);
+}
+
+void Window::createSurface(VkInstance instance)
+{
+	glfwCreateWindowSurface(instance, mGlfwWindow, nullptr, &mVkSurface);
 }
 
 bool Window::shouldClose()
@@ -47,4 +57,9 @@ const int Window::getWidth() const
 const int Window::getHeight() const
 {
 	return 0;
+}
+
+const VkSurfaceKHR Window::getSurface() const
+{
+	return mVkSurface;
 }

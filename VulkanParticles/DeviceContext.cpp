@@ -68,7 +68,7 @@ void DeviceContext::selectPhysicalDevice(const VkInstance instance)
 }
 
 
-void DeviceContext::createLogicalDevice(std::vector<const char*> &desiredExtensions, VkPhysicalDeviceFeatures &desiredPhysicalDeviceFeatures)
+void DeviceContext::createLogicalDevice(std::vector<const char*>& desiredExtensions, VkPhysicalDeviceFeatures& desiredPhysicalDeviceFeatures)
 {
 	if (!checkDesiredDeviceExtensions(desiredExtensions))
 	{
@@ -81,32 +81,8 @@ void DeviceContext::createLogicalDevice(std::vector<const char*> &desiredExtensi
 	}
 	VkPhysicalDeviceFeatures desiredFeatures{};
 	desiredFeatures.geometryShader = 1;
-	
-	uint32_t queueFamilyPropertyCount = 0;
-	vkGetPhysicalDeviceQueueFamilyProperties(mVkPhysicalDevice, &queueFamilyPropertyCount, nullptr);
-	std::vector<VkQueueFamilyProperties> queueFamilyProperties;
-	queueFamilyProperties.resize(queueFamilyPropertyCount);
-	vkGetPhysicalDeviceQueueFamilyProperties(mVkPhysicalDevice, &queueFamilyPropertyCount, queueFamilyProperties.data());
 
-	for (int i = 0; i < queueFamilyPropertyCount; i++)
-	{
-		int queueIndex = i;
-		if ((queueFamilyProperties[queueIndex].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
-		{
-			mGraphicsQueueInfo.familyIndex = queueIndex;
-			break;
-		}
-	}
-	mGraphicsQueueInfo.priorities.push_back(1.0f);
-	for (int i = 0; i < queueFamilyPropertyCount; i++)
-	{
-		int queueIndex = i;
-		if((queueFamilyProperties[queueIndex].queueFlags & VK_QUEUE_COMPUTE_BIT) != 0)
-		{
-			mComputeQueueInfo.familyIndex = queueIndex;
-			break;
-		}
-	}
+	findQueueFamilies();
 	std::vector<QueueInfo> requestQueues;
 	requestQueues.push_back(QueueInfo{ mGraphicsQueueInfo.familyIndex, {1.0f} });
 	if (mGraphicsQueueInfo.familyIndex != mComputeQueueInfo.familyIndex)
@@ -138,7 +114,7 @@ void DeviceContext::createLogicalDevice(std::vector<const char*> &desiredExtensi
 	deviceCreateInfo.enabledExtensionCount = desiredExtensions.size();
 	deviceCreateInfo.ppEnabledExtensionNames = desiredExtensions.data();
 	deviceCreateInfo.pEnabledFeatures = &desiredFeatures;
-	
+
 
 	if (vkCreateDevice(mVkPhysicalDevice, &deviceCreateInfo, nullptr, &mVkDevice) != VK_SUCCESS)
 	{
@@ -150,6 +126,51 @@ void DeviceContext::createLogicalDevice(std::vector<const char*> &desiredExtensi
 	if (mGraphicsQueue == nullptr || mComputeQueue == nullptr)
 	{
 		throw std::runtime_error("failed to get device queue");
+	}
+
+	std::cout << "Created device and queues: \nGraphics queue index: " << mGraphicsQueueInfo.familyIndex << "\n";
+	std::cout << "Compute queue index: " << mComputeQueueInfo.familyIndex << "\n";
+}
+void DeviceContext::findQueueFamilies()
+{
+	uint32_t queueFamilyPropertyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(mVkPhysicalDevice, &queueFamilyPropertyCount, nullptr);
+	std::vector<VkQueueFamilyProperties> queueFamilyProperties;
+	queueFamilyProperties.resize(queueFamilyPropertyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(mVkPhysicalDevice, &queueFamilyPropertyCount, queueFamilyProperties.data());
+
+
+	for (int i = 0; i < queueFamilyPropertyCount; i++)
+	{
+		int queueIndex = i;
+		if ((queueFamilyProperties[queueIndex].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
+		{
+			mGraphicsQueueInfo.familyIndex = queueIndex;
+			break;
+		}
+	}
+	mGraphicsQueueInfo.priorities.push_back(1.0f);
+	bool foundOnlyComputeQueue = false;
+	for (int i = 0; i < queueFamilyPropertyCount; i++)
+	{
+		int queueIndex = i;
+		if ((queueFamilyProperties[queueIndex].queueFlags & VK_QUEUE_COMPUTE_BIT) != 0 && queueIndex != mGraphicsQueueInfo.familyIndex)
+		{
+			mComputeQueueInfo.familyIndex = queueIndex;
+			foundOnlyComputeQueue = true;
+			break;
+		}
+	}
+	if (!foundOnlyComputeQueue)
+	{
+		if ((queueFamilyProperties[mGraphicsQueueInfo.familyIndex].queueFlags & VK_QUEUE_COMPUTE_BIT) != 0)
+		{
+			mComputeQueueInfo.familyIndex = mGraphicsQueueInfo.familyIndex;
+		}
+		else
+		{
+			throw std::runtime_error("no queue family with compute capability found");
+		}
 	}
 }
 bool DeviceContext::checkDesiredDeviceFeatures()
