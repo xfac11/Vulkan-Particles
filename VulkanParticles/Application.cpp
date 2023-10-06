@@ -72,7 +72,9 @@ int Application::initialize()
 	mDeviceContext.createLogicalDevice(mDesiredDeviceExtensions, mDesiredDeviceFeatures);
 
 	mWindow.createWindow();
-	mWindow.createSurface(mVkInstance);
+	mDeviceContext.createSurface(mVkInstance, mWindow.getGLFWWindow());
+	VkExtent2D size{ mWindow.getWidth(), mWindow.getHeight() };
+	mDeviceContext.createSwapchain(size);
 	return 0;
 }
 
@@ -169,7 +171,7 @@ int Application::run()
 
 int Application::clear()
 {
-	mDeviceContext.clear();
+	mDeviceContext.clear(mVkInstance);
 	mWindow.clear(mVkInstance);
 
 

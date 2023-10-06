@@ -9,14 +9,12 @@ public:
 	void initialize();
 	void clear(VkInstance instance);
 	void createWindow();
-	void createSurface(VkInstance instance);
 	bool shouldClose();
-	const int getWidth()const;
-	const int getHeight()const;
-	const VkSurfaceKHR getSurface()const;
+	const uint32_t getWidth()const;
+	const uint32_t getHeight()const;
+	GLFWwindow* getGLFWWindow()const;
 private:
 	GLFWwindow *mGlfwWindow;
-	VkSurfaceKHR mVkSurface;
 	uint32_t mWidth;
 	uint32_t mHeight;
 	const char* mTitle;

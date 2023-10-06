@@ -3,7 +3,6 @@
 Window::Window()
 {
 	mGlfwWindow = nullptr;
-	mVkSurface = nullptr;
 	mTitle = "";
 	mWidth = 0;
 	mHeight = 0;
@@ -11,7 +10,6 @@ Window::Window()
 Window::Window(uint32_t width, uint32_t height, const char* title) :mWidth(width),mHeight(height)
 {
 	mGlfwWindow = nullptr;
-	mVkSurface = nullptr;
 	mTitle = title;
 }
 
@@ -26,7 +24,7 @@ void Window::initialize()
 
 void Window::clear(VkInstance instance)
 {
-	vkDestroySurfaceKHR(instance, mVkSurface, nullptr);
+	
 }
 
 void Window::createWindow()
@@ -39,27 +37,22 @@ void Window::createWindow()
 	glfwMakeContextCurrent(mGlfwWindow);
 }
 
-void Window::createSurface(VkInstance instance)
-{
-	glfwCreateWindowSurface(instance, mGlfwWindow, nullptr, &mVkSurface);
-}
-
 bool Window::shouldClose()
 {
 	return glfwWindowShouldClose(mGlfwWindow);
 }
 
-const int Window::getWidth() const
+const uint32_t Window::getWidth() const
 {
 	return 0;
 }
 
-const int Window::getHeight() const
+const uint32_t Window::getHeight() const
 {
 	return 0;
 }
 
-const VkSurfaceKHR Window::getSurface() const
+GLFWwindow* Window::getGLFWWindow() const
 {
-	return mVkSurface;
+	return mGlfwWindow;
 }
